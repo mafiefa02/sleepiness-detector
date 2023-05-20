@@ -16,8 +16,12 @@ rightEye = [upRightEye, downRightEye, leftRightEye, rightRightEye]
 mouth = [upMouth, downMouth, leftMouth, rightMouth]
 faceId = leftEye + rightEye + mouth
 
+sleepyEyeRatio = 52
+sleepyMouthRatio = 50
+
 color = {
     "red": (0, 0, 255),
     "green": (0, 255, 0),
-    "blue": (255, 0, 0)
+    "blue": (255, 0, 0),
+    "white": (255, 255, 255)
 }
