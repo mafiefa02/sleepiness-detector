@@ -3,18 +3,14 @@ from cvzone.FaceMeshModule import FaceMeshDetector
 from variables import *
 from cameraPorts import chooseCamera
 import simpleaudio as sa
-import time
-import paho.mqtt.client as mqtt
+import tkinter as tk
+from broker import connectBroker
 
-mqttBroker = "test.mosquitto.org"
-client = mqtt.Client("drowsiness_detection")
-try:
-    client.connect(mqttBroker)
-    print("Connected to MQTT Broker: " + mqttBroker)
-    time.sleep(3)
-except:
-    print("Connection failed to MQTT Broker: " + mqttBroker)
-    time.sleep(3)
+# initialize broker
+client = connectBroker(
+    "test.mosquitto.org", "drowsiness_detection")
+
+# alert function
 
 
 def alert(frame, type):
@@ -23,15 +19,22 @@ def alert(frame, type):
                 cv2.FONT_HERSHEY_PLAIN, 3, color["white"], 2)
     client.publish("drowsiness_detection", type)
 
+# alert stop function
+
 
 def alertStop():
     client.publish("drowsiness_detection", "stop")
 
+# main function
+
 
 def main():
+    # initialize camera
     video = cv2.VideoCapture(chooseCamera())
     video.set(3, 1280)
     video.set(4, 720)
+
+    # initialize detector
     alarm = sa.WaveObject.from_wave_file("assets/alarm.wav")
     detector = FaceMeshDetector(maxFaces=1)
 
@@ -43,16 +46,19 @@ def main():
     alert_condition = False
 
     while True:
+        # read video
         ret, frame = video.read()
         frame = cv2.flip(frame, 1)
         frame, faces = detector.findFaceMesh(frame, draw=False)
 
+        # check if face is detected
         if faces:
             face = faces[0]
 
             for id in faceId:
                 cv2.circle(frame, face[id], 3, color["red"], cv2.FILLED)
 
+            # get distance of eyes and mouth
             leftEyeVerticalDistance, leftEyeVerticalPos = detector.findDistance(
                 face[upLeftEye], face[downLeftEye])
             rightEyeVerticalDistance, rightEyeVerticalPos = detector.findDistance(
@@ -62,6 +68,7 @@ def main():
             rightEyeHorizontalDistance, rightEyeHorizontalPos = detector.findDistance(
                 face[leftRightEye], face[rightRightEye])
 
+            # get ratio of eyes and mouth
             leftEyeRatio = 100*(leftEyeVerticalDistance /
                                 leftEyeHorizontalDistance)
             rightEyeRatio = 100*(rightEyeVerticalDistance /
@@ -101,8 +108,10 @@ def main():
                 yawnDummyCount = 0
                 yawnState = False
 
+        # show video
         cv2.imshow('video capture', frame)
 
+        # exit
         if cv2.waitKey(1) == ord('q'):
             break
 
