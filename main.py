@@ -3,20 +3,29 @@ from cvzone.FaceMeshModule import FaceMeshDetector
 from variables import *
 from cameraPorts import chooseCamera
 import simpleaudio as sa
+import time
+import paho.mqtt.client as mqtt
+
+mqttBroker = "test.mosquitto.org"
+client = mqtt.Client("drowsiness_detection")
+try:
+    client.connect(mqttBroker)
+    print("Connected to MQTT Broker: " + mqttBroker)
+    time.sleep(3)
+except:
+    print("Connection failed to MQTT Broker: " + mqttBroker)
+    time.sleep(3)
 
 
-def alert(frame, song, alert_condition):
+def alert(frame, type):
     cv2.rectangle(frame, (700, 20), (1250, 80), color["red"], cv2.FILLED)
     cv2.putText(frame, "DROWSY ALERT!", (710, 60),
                 cv2.FONT_HERSHEY_PLAIN, 3, color["white"], 2)
-    if not alert_condition:
-        play_obj = song.play()
-        alert_condition = True
+    client.publish("drowsiness_detection", type)
 
 
-def alertStop(song, alert_condition):
-    sa.stop_all()
-    alert_condition = False
+def alertStop():
+    client.publish("drowsiness_detection", "stop")
 
 
 def main():
@@ -73,9 +82,9 @@ def main():
                     print("Sleepy")
                     sleepState = True
                     sleepCount += 1
-                    alert(frame, alarm, alert_condition)
+                    alert(frame, "sleep")
             else:
-                alertStop(alarm, alert_condition)
+                alertStop()
                 sleepDummyCount = 0
                 sleepState = False
 
@@ -86,9 +95,9 @@ def main():
                     print("Yawn")
                     yawnState = True
                     yawnCount += 1
-                    alert(frame, alarm, alert_condition)
+                    alert(frame, "yawn")
             else:
-                alertStop(alarm, alert_condition)
+                alertStop()
                 yawnDummyCount = 0
                 yawnState = False
 
