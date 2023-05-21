@@ -2,9 +2,8 @@ import cv2
 from cvzone.FaceMeshModule import FaceMeshDetector
 from variables import *
 from cameraPorts import chooseCamera
-import simpleaudio as sa
-import tkinter as tk
 from broker import connectBroker
+import threading
 import time
 
 # initialize broker
@@ -14,23 +13,27 @@ client = connectBroker(
 # alert function
 
 
-def alert(frame, type, last_alert):
+def alert(frame, type):
     cv2.rectangle(frame, (700, 20), (1250, 80), color["red"], cv2.FILLED)
     cv2.putText(frame, "DROWSY ALERT!", (710, 60),
                 cv2.FONT_HERSHEY_PLAIN, 3, color["white"], 2)
-    # event.wait()
     client.publish("drowsiness_detection", type)
-    last_alert = True
+    print("Published: " + type)
+    # last_alert = True
     # print("Alert")
     # time.sleep(5)
 
 # alert stop function
 
 
-def alertStop(last_alert):
-    # event.wait()
-    client.publish("drowsiness_detection", "stop")
-    last_alert = False
+def alertStop(event):
+    while event.is_alive():
+        event.join()
+        print("Waiting for alert to stop")
+    if not event.is_alive():
+        client.publish("drowsiness_detection", "stop")
+        print("Published: stop")
+    # last_alert = False
     # print("Alert Stop")
     # time.sleep(5)
 
@@ -52,15 +55,28 @@ def main():
     sleepState, yawnState = (False, False)
     sleepCount = 0
     yawnCount = 0
-    alert_condition = False
+    # alert_condition = False
 
     while True:
-        last_alert = alert_condition
+        # last_alert = alert_condition
 
         # read video
         ret, frame = video.read()
         frame = cv2.flip(frame, 1)
         frame, faces = detector.findFaceMesh(frame, draw=False)
+
+        alert_event = threading.Thread(target=alert, args=(
+            frame, "sleepy" if sleepState else "yawn"))
+
+        stop_alert_event = threading.Thread(
+            target=alertStop, args=(alert_event,))
+
+        if sleepState or yawnState:
+            alert_event.start()
+            print("Alert for 3 seconds")
+            alert_event.join()
+        else:
+            alertStop(alert_event)
 
         # check if face is detected
         if faces:
@@ -103,7 +119,7 @@ def main():
             else:
                 sleepDummyCount = 0
                 sleepState = False
-                alert_condition = False
+                # alert_condition = False
 
             # YAWN
             if mouthRatio >= sleepyMouthRatio:
@@ -115,18 +131,18 @@ def main():
             else:
                 yawnDummyCount = 0
                 yawnState = False
-                alert_condition = False
+                # alert_condition = False
 
             # alert only once
-            if last_alert == False and alert_condition == False:
-                pass
+            # if last_alert == False and alert_condition == False:
+                # pass
 
-            if last_alert == True and alert_condition == False:
-                alertStop(last_alert)
+            # if last_alert == True and alert_condition == False:
+                # alertStop(last_alert)
 
-            if last_alert == False and (sleepState or yawnState):
-                alert(frame, "sleepy" if sleepState else "yawn", last_alert)
-                alert_condition = True
+            # if last_alert == False and (sleepState or yawnState):
+                # alert(frame, "sleepy" if sleepState else "yawn", last_alert)
+                # alert_condition = True
 
         # show video
         cv2.imshow('video capture', frame)
