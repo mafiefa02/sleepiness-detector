@@ -1,50 +1,37 @@
-import cv2
+from cv2 import rectangle, putText, FILLED, FONT_HERSHEY_PLAIN, FONT_HERSHEY_SIMPLEX, flip, imshow, waitKey, circle, destroyAllWindows, VideoCapture, resize, INTER_AREA, COLOR_BGR2GRAY, cvtColor, COLOR_RGB2BGR, COLOR_RGB2GRAY, COLOR_BGR2RGB, COLOR_GRAY2RGB, COLOR_GRAY2BGR, COLOR_BGR2GRAY, COLOR_GRAY2BGR, COLOR_BGR2RGB, COLOR_RGB2BGR, COLOR_RGB2GRAY, COLOR_GRAY2RGB, COLOR_GRAY2BGR, COLOR_BGR2GRAY, COLOR_GRAY2BGR, COLOR_BGR2RGB, COLOR_RGB2BGR, COLOR_RGB2GRAY, COLOR_GRAY2RGB, COLOR_GRAY2BGR, COLOR_BGR2GRAY, COLOR_GRAY2BGR, COLOR_BGR2RGB, COLOR_RGB2BGR, COLOR_RGB2GRAY, COLOR_GRAY2RGB, COLOR_GRAY2BGR, COLOR_BGR2GRAY, COLOR_GRAY2BGR, COLOR_BGR2RGB, COLOR_RGB2BGR, COLOR_RGB2GRAY, COLOR_GRAY2RGB, COLOR_GRAY2BGR, COLOR_BGR2GRAY, COLOR_GRAY2BGR, COLOR_BGR2RGB, COLOR_RGB2BGR, COLOR_RGB2GRAY, COLOR_GRAY2RGB, COLOR_GRAY2BGR, COLOR_BGR2GRAY, COLOR_GRAY2BGR
 from cvzone.FaceMeshModule import FaceMeshDetector
 from variables import *
 from cameraPorts import chooseCamera
 from broker import connectBroker
-import threading
-import time
+from threading import Thread
+from time import sleep
 
 # initialize broker
 client = connectBroker(
     "test.mosquitto.org", "drowsiness_detection")
 
-# alert function
-
 
 def alert(frame, type):
-    cv2.rectangle(frame, (700, 20), (1250, 80), color["red"], cv2.FILLED)
-    cv2.putText(frame, "DROWSY ALERT!", (710, 60),
-                cv2.FONT_HERSHEY_PLAIN, 3, color["white"], 2)
+    rectangle(frame, (700, 20), (1250, 80), color["red"], FILLED)
+    putText(frame, "DROWSY ALERT!", (710, 60),
+            FONT_HERSHEY_PLAIN, 3, color["white"], 2)
     client.publish("drowsiness_detection", type)
     print("Published: " + type)
-    time.sleep(3)
-    # last_alert = True
-    # print("Alert")
-    # time.sleep(5)
-
-# alert stop function
+    sleep(3)  # alert for 3 seconds
 
 
-def alertStop(event):
+def alertStop():
     client.publish("drowsiness_detection", "stop")
     print("Published: stop")
-    # last_alert = False
-    # print("Alert Stop")
-    # time.sleep(5)
-
-# main function
 
 
 def main():
     # initialize camera
-    video = cv2.VideoCapture(chooseCamera())
+    video = VideoCapture(chooseCamera())
     video.set(3, 1280)
     video.set(4, 720)
 
     # initialize detector
-    # alarm = sa.WaveObject.from_wave_file("assets/alarm.wav")
     detector = FaceMeshDetector(maxFaces=1)
 
     # conditions
@@ -52,32 +39,32 @@ def main():
     sleepState, yawnState = (False, False)
     sleepCount = 0
     yawnCount = 0
-    # alert_condition = False
 
     while True:
-        # last_alert = alert_condition
-
         # read video
         ret, frame = video.read()
-        frame = cv2.flip(frame, 1)
+        frame = flip(frame, 1)
         frame, faces = detector.findFaceMesh(frame, draw=False)
 
-        alert_event = threading.Thread(target=alert, args=(
-            frame, "sleepy" if sleepState else "yawn"))
-
-        if sleepState or yawnState:
+        if sleepState:
+            alert_event = Thread(target=alert, args=(
+                frame, "sleepy"))
             alert_event.start()
-            print("Alert for 3 seconds")
+            alert_event.join()
+        elif yawnState:
+            alert_event = Thread(target=alert, args=(
+                frame, "yawn"))
+            alert_event.start()
             alert_event.join()
         else:
-            alertStop(alert_event)
+            alertStop()
 
         # check if face is detected
         if faces:
             face = faces[0]
 
             for id in faceId:
-                cv2.circle(frame, face[id], 3, color["red"], cv2.FILLED)
+                circle(frame, face[id], 3, color["red"], FILLED)
 
             # get distance of eyes and mouth
             leftEyeVerticalDistance, leftEyeVerticalPos = detector.findDistance(
@@ -103,50 +90,35 @@ def main():
             mouthRatio = 100*(mouthVerticalDistance/mouthHorizontalDistance)
             print(leftEyeRatio, rightEyeRatio, mouthRatio)
 
-            # SLEEP
+            # sleepy detection
             if leftEyeRatio <= sleepyEyeRatio or rightEyeRatio <= sleepyEyeRatio:
                 sleepDummyCount += 1
                 if sleepDummyCount >= sleepyDelay:
-                    print("Sleepy")
                     sleepState = True
                     sleepCount += 1
             else:
                 sleepDummyCount = 0
                 sleepState = False
-                # alert_condition = False
 
-            # YAWN
+            # yawn detection
             if mouthRatio >= sleepyMouthRatio:
                 yawnDummyCount += 1
                 if yawnDummyCount >= yawnDelay:
-                    print("Yawn")
                     yawnState = True
                     yawnCount += 1
             else:
                 yawnDummyCount = 0
                 yawnState = False
-                # alert_condition = False
-
-            # alert only once
-            # if last_alert == False and alert_condition == False:
-                # pass
-
-            # if last_alert == True and alert_condition == False:
-                # alertStop(last_alert)
-
-            # if last_alert == False and (sleepState or yawnState):
-                # alert(frame, "sleepy" if sleepState else "yawn", last_alert)
-                # alert_condition = True
 
         # show video
-        cv2.imshow('video capture', frame)
+        imshow('video capture', frame)
 
-        # exit
-        if cv2.waitKey(1) == ord('q'):
+        # exit by pressing 'q'
+        if waitKey(1) == ord('q'):
             break
 
     video.release()
-    cv2.destroyAllWindows()
+    destroyAllWindows()
 
 
 main()
