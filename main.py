@@ -89,11 +89,10 @@ def main():
                     print("Sleepy")
                     sleepState = True
                     sleepCount += 1
-                    alert(frame, "sleep")
             else:
-                alertStop()
                 sleepDummyCount = 0
                 sleepState = False
+                alert_condition = False
 
             # YAWN
             if mouthRatio >= sleepyMouthRatio:
@@ -102,11 +101,18 @@ def main():
                     print("Yawn")
                     yawnState = True
                     yawnCount += 1
-                    alert(frame, "yawn")
             else:
-                alertStop()
                 yawnDummyCount = 0
                 yawnState = False
+                alert_condition = False
+
+        # check if alert condition is met
+        if not alert_condition and (sleepState or yawnState):
+            alert_condition = True
+            if yawnState:
+                alert(frame, "yawn")
+            elif sleepState:
+                alert(frame, "sleep")
 
         # show video
         cv2.imshow('video capture', frame)
