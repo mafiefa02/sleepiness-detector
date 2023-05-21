@@ -19,6 +19,7 @@ def alert(frame, type):
                 cv2.FONT_HERSHEY_PLAIN, 3, color["white"], 2)
     client.publish("drowsiness_detection", type)
     print("Published: " + type)
+    time.sleep(3)
     # last_alert = True
     # print("Alert")
     # time.sleep(5)
@@ -27,12 +28,8 @@ def alert(frame, type):
 
 
 def alertStop(event):
-    while event.is_alive():
-        event.join()
-        print("Waiting for alert to stop")
-    if not event.is_alive():
-        client.publish("drowsiness_detection", "stop")
-        print("Published: stop")
+    client.publish("drowsiness_detection", "stop")
+    print("Published: stop")
     # last_alert = False
     # print("Alert Stop")
     # time.sleep(5)
@@ -67,9 +64,6 @@ def main():
 
         alert_event = threading.Thread(target=alert, args=(
             frame, "sleepy" if sleepState else "yawn"))
-
-        stop_alert_event = threading.Thread(
-            target=alertStop, args=(alert_event,))
 
         if sleepState or yawnState:
             alert_event.start()
