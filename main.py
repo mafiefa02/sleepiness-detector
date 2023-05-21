@@ -5,6 +5,7 @@ from cameraPorts import chooseCamera
 import simpleaudio as sa
 import tkinter as tk
 from broker import connectBroker
+import time
 
 # initialize broker
 client = connectBroker(
@@ -13,17 +14,25 @@ client = connectBroker(
 # alert function
 
 
-def alert(frame, type):
+def alert(frame, type, last_alert):
     cv2.rectangle(frame, (700, 20), (1250, 80), color["red"], cv2.FILLED)
     cv2.putText(frame, "DROWSY ALERT!", (710, 60),
                 cv2.FONT_HERSHEY_PLAIN, 3, color["white"], 2)
+    # event.wait()
     client.publish("drowsiness_detection", type)
+    last_alert = True
+    # print("Alert")
+    # time.sleep(5)
 
 # alert stop function
 
 
-def alertStop():
+def alertStop(last_alert):
+    # event.wait()
     client.publish("drowsiness_detection", "stop")
+    last_alert = False
+    # print("Alert Stop")
+    # time.sleep(5)
 
 # main function
 
@@ -46,6 +55,8 @@ def main():
     alert_condition = False
 
     while True:
+        last_alert = alert_condition
+
         # read video
         ret, frame = video.read()
         frame = cv2.flip(frame, 1)
@@ -106,13 +117,16 @@ def main():
                 yawnState = False
                 alert_condition = False
 
-        # check if alert condition is met
-        if not alert_condition and (sleepState or yawnState):
-            alert_condition = True
-            if yawnState:
-                alert(frame, "yawn")
-            elif sleepState:
-                alert(frame, "sleep")
+            # alert only once
+            if last_alert == False and alert_condition == False:
+                pass
+
+            if last_alert == True and alert_condition == False:
+                alertStop(last_alert)
+
+            if last_alert == False and (sleepState or yawnState):
+                alert(frame, "sleepy" if sleepState else "yawn", last_alert)
+                alert_condition = True
 
         # show video
         cv2.imshow('video capture', frame)
