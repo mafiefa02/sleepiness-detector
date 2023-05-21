@@ -35,7 +35,7 @@ def main():
     video.set(4, 720)
 
     # initialize detector
-    alarm = sa.WaveObject.from_wave_file("assets/alarm.wav")
+    # alarm = sa.WaveObject.from_wave_file("assets/alarm.wav")
     detector = FaceMeshDetector(maxFaces=1)
 
     # conditions
