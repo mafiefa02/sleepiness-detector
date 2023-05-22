@@ -1,0 +1,199 @@
+[
+    {
+        "id": "6b5874d6fa419648",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "ec21e91debc35247",
+        "type": "mqtt in",
+        "z": "6b5874d6fa419648",
+        "name": "",
+        "topic": "drowsiness_detection_database",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "83fce05580cae83d",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 410,
+        "y": 360,
+        "wires": [
+            [
+                "84f37aa8b2963a57",
+                "548a2e63bd83620d"
+            ]
+        ]
+    },
+    {
+        "id": "548a2e63bd83620d",
+        "type": "debug",
+        "z": "6b5874d6fa419648",
+        "name": "debug 1",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "84f37aa8b2963a57",
+        "type": "function",
+        "z": "6b5874d6fa419648",
+        "name": "String to JSON",
+        "func": "let data = msg.payload.split(\",\");\nlet dict = {\n    sleepState: data[0],\n    yawnState: data[1],\n    leftEyeRatio: parseFloat(data[2]),\n    rightEyeRatio: parseFloat(data[3]),\n    mouthRatio: parseFloat(data[4]),\n    timestamp: data[5],\n};\nmsg.payload = dict;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 440,
+        "wires": [
+            [
+                "88704dd450cdb519",
+                "ee3652ac6ef0eb68"
+            ]
+        ]
+    },
+    {
+        "id": "88704dd450cdb519",
+        "type": "influxdb out",
+        "z": "6b5874d6fa419648",
+        "influxdb": "de1987f50c550a22",
+        "name": "DB",
+        "measurement": "dakdsakd",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "database",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "itb",
+        "bucket": "UASv2",
+        "x": 910,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "ee3652ac6ef0eb68",
+        "type": "debug",
+        "z": "6b5874d6fa419648",
+        "name": "debug 2",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 700,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "8112f7bcfd02e8c6",
+        "type": "inject",
+        "z": "6b5874d6fa419648",
+        "name": "",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 290,
+        "y": 540,
+        "wires": [
+            [
+                "7e9bb7e7069f3d75"
+            ]
+        ]
+    },
+    {
+        "id": "7e9bb7e7069f3d75",
+        "type": "influxdb in",
+        "z": "6b5874d6fa419648",
+        "influxdb": "de1987f50c550a22",
+        "name": "DB",
+        "query": "from(bucket: \"UASv2\")\n  |> range(start: -12h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"dakdsakd\")",
+        "rawOutput": false,
+        "precision": "",
+        "retentionPolicy": "",
+        "org": "itb",
+        "x": 450,
+        "y": 540,
+        "wires": [
+            [
+                "81382301d09998d9"
+            ]
+        ]
+    },
+    {
+        "id": "81382301d09998d9",
+        "type": "debug",
+        "z": "6b5874d6fa419648",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 620,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "83fce05580cae83d",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "test.mosquitto.org",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "de1987f50c550a22",
+        "type": "influxdb",
+        "hostname": "127.0.0.1",
+        "port": "8086",
+        "protocol": "http",
+        "database": "database",
+        "name": "DB",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "2.0",
+        "url": "http://localhost:8086",
+        "rejectUnauthorized": true
+    }
+]
