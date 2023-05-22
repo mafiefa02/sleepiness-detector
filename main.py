@@ -5,24 +5,27 @@ from cameraPorts import chooseCamera
 from broker import connectBroker
 from threading import Thread
 from time import sleep
+from datetime import datetime
 
 # initialize broker
 client = connectBroker(
     "test.mosquitto.org", "drowsiness_detection")
 
 
-def alert(frame, type):
+def alert(frame, type, last_type):
     rectangle(frame, (700, 20), (1250, 80), color["red"], FILLED)
     putText(frame, "DROWSY ALERT!", (710, 60),
             FONT_HERSHEY_PLAIN, 3, color["white"], 2)
-    client.publish("drowsiness_detection", type)
-    print("Published: " + type)
-    sleep(3)  # alert for 3 seconds
+    if type != last_type:
+        client.publish("drowsiness_detection", type)
+        print("Published: " + type)
+    # sleep(3)  # alert for 3 seconds
 
 
-def alertStop():
-    client.publish("drowsiness_detection", "stop")
-    print("Published: stop")
+def alertStop(last_type):
+    if last_type != "stop":
+        client.publish("drowsiness_detection", "stop")
+        print("Published: stop")
 
 
 def main():
@@ -35,10 +38,11 @@ def main():
     detector = FaceMeshDetector(maxFaces=1)
 
     # conditions
-    sleepDummyCount, yawnDummyCount, sleepyDelay, yawnDelay = (0, 0, 7, 7)
+    sleepDummyCount, yawnDummyCount, sleepyDelay, yawnDelay = (0, 0, 30, 30)
     sleepState, yawnState = (False, False)
     sleepCount = 0
     yawnCount = 0
+    last_type = "stop"
 
     while True:
         # read video
@@ -48,16 +52,19 @@ def main():
 
         if sleepState:
             alert_event = Thread(target=alert, args=(
-                frame, "sleepy"))
+                frame, "sleepy", last_type))
             alert_event.start()
             alert_event.join()
+            last_type = "sleepy"
         elif yawnState:
             alert_event = Thread(target=alert, args=(
-                frame, "yawn"))
+                frame, "yawn", last_type))
             alert_event.start()
             alert_event.join()
+            last_type = "yawn"
         else:
-            alertStop()
+            alertStop(last_type)
+            last_type = "stop"
 
         # check if face is detected
         if faces:
@@ -110,6 +117,11 @@ def main():
                 yawnDummyCount = 0
                 yawnState = False
 
+            time = datetime.now().strftime("%H:%M:%S")
+            data_published = [sleepState, yawnState, leftEyeRatio, rightEyeRatio, mouthRatio, time]
+            client.publish("drowsiness_detection_database", ','.join(map(str, data_published)))
+            # print("Published: " + str(data_published))
+
         # show video
         imshow('video capture', frame)
 
@@ -119,6 +131,7 @@ def main():
 
     video.release()
     destroyAllWindows()
+    client.publish("drowsiness_detection", "stop")
 
 
 main()
